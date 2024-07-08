@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",                                                                        
+    "jsx": "preserve", 
+    "module": "ESNext",                                                
+    "moduleResolution": "node",
+    // "rootDir": "./src",                     
+    "rootDir": "./",                     
+    "baseUrl": ".",                                  
+    "paths": {
+      "common/*": [
+        "src/common/*"
+      ],
+      "@/*": [
+        "src/*"
+      ]
+    },      
+    "strict": true,                                 
+    "sourceMap": true, // 生成sourceMap 方便源码调试
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitReturns": true,
+    "importHelpers": true,
+    "noUnusedLocals": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedParameters": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports":true                      
+  },
+  "include": [
+    "src",
+  ],
+}
