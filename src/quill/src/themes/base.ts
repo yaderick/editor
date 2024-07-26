@@ -64,6 +64,7 @@ class BaseTheme extends Theme {
   pickers: Picker[];
   tooltip?: Tooltip;
 
+  // dom 添加监听事件
   constructor(quill: Quill, options: ThemeOptions) {
     super(quill, options);
     const listener = (e: MouseEvent) => {

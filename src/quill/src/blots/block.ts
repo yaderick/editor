@@ -16,6 +16,7 @@ const NEWLINE_LENGTH = 1;
 class Block extends BlockBlot {
   cache: { delta?: Delta | null; length?: number } = {};
 
+  // 返回delta
   delta(): Delta {
     if (this.cache.delta == null) {
       this.cache.delta = blockDelta(this);
@@ -52,6 +53,7 @@ class Block extends BlockBlot {
       return;
     }
     if (value.length === 0) return;
+    // 按'\n' 区分block 
     const lines = value.split('\n');
     const text = lines.shift() as string;
     if (text.length > 0) {
@@ -65,9 +67,10 @@ class Block extends BlockBlot {
     // TODO: Fix this next time the file is edited.
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     let block: Blot | this = this;
+    // 遍历内容，将数据按'\n'切分为块
     lines.reduce((lineIndex, line) => {
       // @ts-expect-error Fix me later
-      block = block.split(lineIndex, true);
+      block = block.split(lineIndex, true); // 自己的方法 113行
       block.insertAt(0, line);
       return line.length;
     }, index + text.length);
@@ -107,10 +110,11 @@ class Block extends BlockBlot {
     super.removeChild(child);
     this.cache = {};
   }
-
+  // 单独处理block
   split(index: number, force: boolean | undefined = false): Blot | null {
     if (force && (index === 0 || index >= this.length() - NEWLINE_LENGTH)) {
-      const clone = this.clone();
+      // 返回Blot 实例
+      const clone = this.clone(); // 来源于 shadow.ts 的clone 方法
       if (index === 0) {
         this.parent.insertBefore(clone, this);
         return this;
@@ -179,7 +183,7 @@ class BlockEmbed extends EmbedBlot {
 }
 BlockEmbed.scope = Scope.BLOCK_BLOT;
 // It is important for cursor behavior BlockEmbeds use tags that are block level elements
-
+// 对于光标行为而言，BlockEmbeds 使用的标签必须是块级元素
 function blockDelta(blot: BlockBlot, filter = true) {
   return blot
     .descendants(LeafBlot)

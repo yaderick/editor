@@ -96,7 +96,7 @@ class Clipboard extends Module<ClipboardOptions> {
   addMatcher(selector: Selector, matcher: Matcher) {
     this.matchers.push([selector, matcher]);
   }
-
+  // 数据类型转换： html -> delta
   convert(
     { html, text }: { html?: string; text?: string },
     formats: Record<string, unknown> = {},

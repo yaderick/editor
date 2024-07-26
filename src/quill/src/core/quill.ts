@@ -209,32 +209,59 @@ class Quill {
     this.root = this.addContainer('ql-editor');
     this.root.classList.add('ql-blank');
     this.emitter = new Emitter();
+
+    // scroll
     const scrollBlotName = Parchment.ScrollBlot.blotName;
+    // 前期注册时已调用registry.ts 中的registry 记录在this.type 中，再取出来Scroll class, 注册时是quill/blot/scroll.ts
     const ScrollBlot = this.options.registry.query(scrollBlotName);
     if (!ScrollBlot || !('blotName' in ScrollBlot)) {
       throw new Error(
         `Cannot initialize Quill without "${scrollBlotName}" blot`,
       );
     }
+    /*
+    * 将blot 实例化后维护好关系，然后生成真实dom , 完成blot 映射成dom  
+
+    * <div class='ql-editor'>  // root
+    *   <p>  // Block
+    *     </br>  // Break
+    *   </p>
+    * </div>
+    */ 
+    // 完成dom加载和blot初始化
     this.scroll = new ScrollBlot(this.options.registry, this.root, {
       emitter: this.emitter,
     }) as Scroll;
+
+    // delta 的初始化 遍历blot 的父子关系 初始化delta
     this.editor = new Editor(this.scroll);
+
+    // 实例化光标 blot ,注册 输入法、鼠标按下等事件
     this.selection = new Selection(this.scroll, this.emitter);
+    // 处理合成事件，在中文日文下一般输入法会触发compositionstart事件，英文不会，防止输入拼音时不断触发input 事件
     this.composition = new Composition(this.scroll, this.emitter);
+    // 初始化主题即 富文本的工具栏；实例化了下面对应的类
+    // SnowTheme、 Bubble 继承BaseTheme 继承 Theme 
     this.theme = new this.options.theme(this, this.options); // eslint-disable-line new-cap
-    this.keyboard = this.theme.addModule('keyboard');
+    // 注册默认自带模块，addModule 来自Theme 类提供的； 首先通过 quill.import(modules/${name})类，然后实例化并将参数传入并返回实例对象
+
+    this.keyboard = this.theme.addModule('keyboard');      // 键盘相关事件
     this.clipboard = this.theme.addModule('clipboard');
     this.history = this.theme.addModule('history');
-    this.uploader = this.theme.addModule('uploader');
-    this.theme.addModule('input');
+    this.uploader = this.theme.addModule('uploader');  // 图片自动退拽
+    // 参数里没有手动添加
+    this.theme.addModule('input');  // 
     this.theme.addModule('uiNode');
+    // 除了上述几个默认带的，用户自定义的modules、toolbar 实例化并注册，方便后续获取对应的modules
     this.theme.init();
+    // 监听 编辑器变化；例如回车，光标插入
     this.emitter.on(Emitter.events.EDITOR_CHANGE, (type) => {
       if (type === Emitter.events.TEXT_CHANGE) {
+        //  true时 ， ql-blank 没有自动添加， 有的话什么操作都没， false时， ql-blank 没有什么操作都没， 有的话什么移除
         this.root.classList.toggle('ql-blank', this.editor.isBlank());
       }
     });
+     // dom 更新完成
     this.emitter.on(Emitter.events.SCROLL_UPDATE, (source, mutations) => {
       const oldRange = this.selection.lastRange;
       const [newRange] = this.selection.getRange();
@@ -242,10 +269,11 @@ class Quill {
         oldRange && newRange ? { oldRange, newRange } : undefined;
       modify.call(
         this,
-        () => this.editor.update(null, mutations, selectionInfo),
+        () => this.editor.update(null, mutations, selectionInfo), // blot更新 后同步delta
         source,
       );
     });
+    // 监听 embedBlot 事件
     this.emitter.on(Emitter.events.SCROLL_EMBED_UPDATE, (blot, delta) => {
       const oldRange = this.selection.lastRange;
       const [newRange] = this.selection.getRange();
@@ -262,7 +290,9 @@ class Quill {
         Quill.sources.USER,
       );
     });
+
     if (html) {
+      // 返回delta 数据
       const contents = this.clipboard.convert({
         html: `${html}<p><br></p>`,
         text: '\n',
@@ -748,7 +778,7 @@ class Quill {
     // TODO this is usually undefined
     return change;
   }
-
+  // 运行时根据 delta 来更新blot
   updateContents(
     delta: Delta | Op[],
     source: EmitterSource = Emitter.sources.API,
@@ -876,7 +906,7 @@ function expandConfig(
 // Handle selection preservation and TEXT_CHANGE emission
 // common to modification APIs
 function modify(
-  modifier: () => Delta,
+  modifier: () => Delta,  // 修饰符 函数
   source: EmitterSource,
   index: number | boolean,
   shift: number | null,
@@ -890,6 +920,7 @@ function modify(
   }
   let range = index == null ? null : this.getSelection();
   const oldDelta = this.editor.delta;
+  // 返回delta
   const change = modifier();
   if (range != null) {
     if (index === true) {

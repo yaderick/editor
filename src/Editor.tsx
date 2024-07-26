@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, forwardRef, useLayoutEffect } from 'react'
+import React, { useEffect, useRef, forwardRef, useLayoutEffect, useState } from 'react'
 import "quill-css/quill.snow.css";
 
 import Quill, {Module,Parchment,  Range} from 'quill';
@@ -22,51 +22,53 @@ interface EditorIprops {
 
 }
 const RichEditor: React.FC<EditorIprops> = () => {
-    class Anemail {
-      static defaultConif ={
-        a: 1
-      }
-      static j () {
-        console.log('我是静态方法2', this);
+
+  const [input, setInput] = useState('')
+    // class Anemail {
+    //   static defaultConif ={
+    //     a: 1
+    //   }
+    //   static j () {
+    //     console.log('我是静态方法2', this);
         
-      }
+    //   }
 
-      public name = '我是类'
-      private age = 23
+    //   public name = '我是类'
+    //   private age = 23
 
-      constructor() {
+    //   constructor() {
         
-      }
-      getName() {
-        return this.name
-      }
-      setName(name) {
-        this.name = name
-      }
-      test() {
-        console.log('我是实例方法', this);
-        console.log('测试默认值', this.name, this.age);
-      }
+    //   }
+    //   getName() {
+    //     return this.name
+    //   }
+    //   setName(name) {
+    //     this.name = name
+    //   }
+    //   test() {
+    //     console.log('我是实例方法', this);
+    //     console.log('测试默认值', this.name, this.age);
+    //   }
 
 
-    }
+    // }
 
-    class Dog extends Anemail {
-      constructor() {
-        super()
-        this.test()
-      }
-      static h () {
-        super.j()
-        console.log('我是静态方法1', this);
-      }
-      ha() {
-        this.h() // 实例方法中不能调用静态方法
-      }
-    }
-    const dog = new Dog()
-    const cat = new Dog()
-    console.log(dog, cat)
+    // class Dog extends Anemail {
+    //   constructor() {
+    //     super()
+    //     this.test()
+    //   }
+    //   static h () {
+    //     super.j()
+    //     console.log('我是静态方法1', this);
+    //   }
+    //   ha() {
+    //     this.h() // 实例方法中不能调用静态方法
+    //   }
+    // }
+    // const dog = new Dog()
+    // const cat = new Dog()
+    // console.log(dog, cat)
 
     useEffect(() => {
       
@@ -84,12 +86,12 @@ const RichEditor: React.FC<EditorIprops> = () => {
       });
 
       console.log(quill)
-      quill.insertText(0, 'Hello', 'link', 'https://world.com');
-      const pNode = document.querySelector('p');
-      const linkNode = document.querySelector('a');
-      const linkBlot = Quill.find(linkNode);
-      const pBlot = Quill.find(pNode);
-      console.log(linkNode, linkBlot, pNode,pBlot, '-----');
+      // quill.insertText(0, 'Hello', 'link', 'https://world.com');
+      // const pNode = document.querySelector('p');
+      // const linkNode = document.querySelector('a');
+      // const linkBlot = Quill.find(linkNode);
+      // const pBlot = Quill.find(pNode);
+      // console.log(linkNode, linkBlot, pNode,pBlot, '-----');
       
 
       // Find Quill instance from a blot
@@ -97,9 +99,10 @@ const RichEditor: React.FC<EditorIprops> = () => {
 
 
       quill.on(Quill.events.TEXT_CHANGE, (delta, oldDelta, eventTrigger: string) => {
-        
+        console.log(delta, oldDelta , quill.scroll, '2')
         
       });
+      console.log(quill.scroll, '1')
 
       // quill.on(Quill.events.SELECTION_CHANGE, (...args) => {
       //   onSelectionChangeRef.current?.(...args);
@@ -108,11 +111,31 @@ const RichEditor: React.FC<EditorIprops> = () => {
     }, [])
 
     return (
+      <div>
+        {/* <div>
+          <input type="text" onInput={(e) => {
+            console.log(e.target.value, 'input');
+            if (!e.target.composing) {
+              console.log(e.target.value, 'input');
+              setInput(e.target.value)
+            }
+            // setInput(e.target.value)
+          }} onCompositionStart={(e) => {
+            console.log('onCompositionStart', e.target.value);
+            e.target.composing = true
+          }} onCompositionEnd={(e) => {
+            e.target.composing = false
+            console.log('onCompositionEnd', e.target.value);
+            setInput(e.target.value)
+          }}/>
+          {input}
+        </div> */}
         <div id='editor'>
-          <p>你好，这是一个html</p>
-          <p>你好，这是二个html</p>
-          <p>你好，这是三个html</p>
+            {/* <p>你好，这是一个html</p>
+            <p>你好，这是二个html</p>
+            <p>你好，这是三个html</p> */}
         </div> 
+      </div>
     )
 }
 

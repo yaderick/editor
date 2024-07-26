@@ -54,18 +54,22 @@ class Selection {
     this.mouseDown = false;
     this.root = this.scroll.domNode;
     // @ts-expect-error
-    this.cursor = this.scroll.create('cursor', this);
+    this.cursor = this.scroll.create('cursor', this); // 实例化cursor blot 但是没有插入dom
     // savedRange is last non-null range
     this.savedRange = new Range(0, 0);
     this.lastRange = this.savedRange;
     this.lastNative = null;
+    // 注册输入法监听事件
     this.handleComposition();
+    // 注册监听鼠标按下事件
     this.handleDragging();
+    // 注册鼠标选取事件
     this.emitter.listenDOM('selectionchange', document, () => {
       if (!this.mouseDown && !this.composing) {
         setTimeout(this.update.bind(this, Emitter.sources.USER), 1);
       }
     });
+    // 
     this.emitter.on(Emitter.events.SCROLL_BEFORE_UPDATE, () => {
       if (!this.hasFocus()) return;
       const native = this.getNativeRange();
@@ -110,6 +114,7 @@ class Selection {
     this.update(Emitter.sources.SILENT);
   }
 
+  // 监听 中文输入法组合输入事件
   handleComposition() {
     this.emitter.on(Emitter.events.COMPOSITION_BEFORE_START, () => {
       this.composing = true;
@@ -130,7 +135,7 @@ class Selection {
       }
     });
   }
-
+  // 监听鼠标按下松开 事件
   handleDragging() {
     this.emitter.listenDOM('mousedown', document.body, () => {
       this.mouseDown = true;
@@ -465,6 +470,7 @@ class Selection {
         cloneDeep(oldRange),
         source,
       ];
+      // 光标选中范围起点和长度
       this.emitter.emit(Emitter.events.EDITOR_CHANGE, ...args);
       if (source !== Emitter.sources.SILENT) {
         this.emitter.emit(...args);

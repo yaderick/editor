@@ -22,21 +22,23 @@ class Editor {
 
   constructor(scroll: Scroll) {
     this.scroll = scroll;
+    // 默认的数据为 换行符 {ops : [{insert: '\n'}] }
     this.delta = this.getDelta();
   }
-
+  // 传入delta 返回delta
   applyDelta(delta: Delta): Delta {
-    this.scroll.update();
-    let scrollLength = this.scroll.length();
-    this.scroll.batchStart();
-    const normalizedDelta = normalizeDelta(delta);
+    this.scroll.update();  // 如果没有dom 变化啥也不干，有了批量初始化blot和 挂载dom
+    let scrollLength = this.scroll.length();  // 获取当期节点数量
+    this.scroll.batchStart(); // 将批量更新开关打开
+    const normalizedDelta = normalizeDelta(delta); // 标准化delta
     const deleteDelta = new Delta();
     const normalizedOps = splitOpLines(normalizedDelta.ops.slice());
+    // 根据delta 渲染dom
     normalizedOps.reduce((index, op) => {
       const length = Op.length(op);
       let attributes = op.attributes || {};
-      let isImplicitNewlinePrepended = false;
-      let isImplicitNewlineAppended = false;
+      let isImplicitNewlinePrepended = false;  
+      let isImplicitNewlineAppended = false; // 是否增加换行符
       if (op.insert != null) {
         deleteDelta.retain(length);
         if (typeof op.insert === 'string') {
@@ -45,7 +47,9 @@ class Editor {
             !text.endsWith('\n') &&
             (scrollLength <= index ||
               !!this.scroll.descendant(BlockEmbed, index)[0]);
+          //
           this.scroll.insertAt(index, text);
+
           const [line, offset] = this.scroll.line(index);
           let formats = merge({}, bubbleFormats(line));
           if (line instanceof Block) {
@@ -117,7 +121,7 @@ class Editor {
       }
       return index + Op.length(op);
     }, 0);
-    this.scroll.batchEnd();
+    this.scroll.batchEnd();  // 将批量更新开关关闭
     this.scroll.optimize();
     return this.update(normalizedDelta);
   }
@@ -159,8 +163,11 @@ class Editor {
     return this.delta.slice(index, index + length);
   }
 
+  // {ops: [{remai: {}}, {inse: {}}]}
   getDelta(): Delta {
-    return this.scroll.lines().reduce((delta, line) => {
+    // this.scroll.lines() = [Block]
+    // new Delta() = {} => {ops: [{remai: {}}, {inse: {}}]}
+    return this.scroll.lines().reduce((delta, line) => { // reduce 用作数据聚合
       return delta.concat(line.delta());
     }, new Delta());
   }
@@ -241,10 +248,11 @@ class Editor {
       new Delta().retain(index).insert(text, cloneDeep(formats)),
     );
   }
-
+  // 编辑器是否为空，<p><br/><p> 也是空的
   isBlank(): boolean {
     if (this.scroll.children.length === 0) return true;
     if (this.scroll.children.length > 1) return false;
+    // 否则 this.scroll.children.length == 1
     const blot = this.scroll.children.head;
     if (blot?.statics.blotName !== Block.blotName) return false;
     const block = blot as Block;
@@ -446,7 +454,7 @@ function getListType(type: string | undefined) {
       return [tag, ''];
   }
 }
-
+// 兼容系统\n \r ，统一替换为\n 换行符
 function normalizeDelta(delta: Delta) {
   return delta.reduce((normalizedDelta, op) => {
     if (typeof op.insert === 'string') {

@@ -14,6 +14,7 @@ class Composition {
 
   private setupListeners() {
     this.scroll.domNode.addEventListener('compositionstart', (event) => {
+      console.log('合成事件发生了', event);
       if (!this.isComposing) {
         this.handleCompositionStart(event);
       }

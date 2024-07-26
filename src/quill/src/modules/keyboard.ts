@@ -136,7 +136,7 @@ class Keyboard extends Module<KeyboardOptions> {
     );
     this.listen();
   }
-
+  // 绑定具体事件和方法
   addBinding(
     keyBinding: Binding,
     context:
@@ -170,8 +170,10 @@ class Keyboard extends Module<KeyboardOptions> {
     });
   }
 
+  // 监听所有键盘事件
   listen() {
     this.quill.root.addEventListener('keydown', (evt) => {
+      console.log('键盘事件发生了',evt )
       if (evt.defaultPrevented || evt.isComposing) return;
 
       // evt.isComposing is false when pressing Enter/Backspace when composing in Safari
@@ -183,6 +185,7 @@ class Keyboard extends Module<KeyboardOptions> {
       const bindings = (this.bindings[evt.key] || []).concat(
         this.bindings[evt.which] || [],
       );
+      // 匹配到 对应的键盘注册事件 
       const matches = bindings.filter((binding) =>
         Keyboard.match(evt, binding),
       );
@@ -330,7 +333,7 @@ class Keyboard extends Module<KeyboardOptions> {
     deleteRange({ range, quill: this.quill });
     this.quill.focus();
   }
-
+  // 回车事件
   handleEnter(range: Range, context: Context) {
     const lineFormats = Object.keys(context.format).reduce(
       (formats: Record<string, unknown>, format) => {

@@ -31,12 +31,16 @@ function isUpdatable(blot: Blot): blot is Blot & UpdatableEmbed {
 class Scroll extends ScrollBlot {
   static blotName = 'scroll';
   static className = 'ql-editor';
-  static tagName = 'DIV';
+  static tagName = 'DIV'; 
   static defaultChild = Block;
   static allowedChildren = [Block, BlockEmbed, Container];
 
   emitter: Emitter;
   batch: false | MutationRecord[];
+  /**
+   *  optimize 初始化方法，实例化blot 和更新dom
+   *  update 运行时方法，更新操作
+   */
 
   constructor(
     registry: Registry,
@@ -46,19 +50,18 @@ class Scroll extends ScrollBlot {
     super(registry, domNode);
     this.emitter = emitter;
     this.batch = false;
-    console.log(this.children);
-    
+    // dom 加载完成 -> 通过实例化blot, 生成链表结构维护好blot 关系，然后生成真实dom， 
     this.optimize();
     this.enable();
     this.domNode.addEventListener('dragstart', (e) => this.handleDragStart(e));
   }
-
+  // 行内块渲染标识符，数据多个'\n'时
   batchStart() {
     if (!Array.isArray(this.batch)) {
       this.batch = [];
     }
   }
-
+  // 行内块渲染标识符
   batchEnd() {
     if (!this.batch) return;
     const mutations = this.batch;
@@ -105,7 +108,7 @@ class Scroll extends ScrollBlot {
     super.formatAt(index, length, format, value);
     this.optimize();
   }
-
+  // 给定位置插入值
   insertAt(index: number, value: string, def?: unknown) {
     if (index >= this.length()) {
       if (def == null || this.scroll.query(value, Scope.BLOCK) == null) {
@@ -125,8 +128,9 @@ class Scroll extends ScrollBlot {
     }
     this.optimize();
   }
-
+  // 插入
   insertBefore(blot: Blot, ref?: Blot | null) {
+
     if (blot.statics.scope === Scope.INLINE_BLOT) {
       const wrapper = this.scroll.create(
         this.statics.defaultChild.blotName,
@@ -233,9 +237,10 @@ class Scroll extends ScrollBlot {
     return this.descendant(isLine, index);
   }
 
+  // 获取所有行内块的blo实例
   lines(index = 0, length = Number.MAX_VALUE): (Block | BlockEmbed)[] {
     const getLines = (
-      blot: ParentBlot,
+      blot: ParentBlot, // 根节点Scroll.js
       blotIndex: number,
       blotLength: number,
     ) => {
@@ -245,12 +250,12 @@ class Scroll extends ScrollBlot {
         blotIndex,
         blotLength,
         (child, childIndex, childLength) => {
-          if (isLine(child)) {
+          if (isLine(child)) { // 校验是不是Block 或者 BlockEmbed
             lines.push(child);
           } else if (child instanceof ContainerBlot) {
             lines = lines.concat(getLines(child, childIndex, lengthLeft));
           }
-          lengthLeft -= childLength;
+          lengthLeft -= childLength; // lengthLeft = lengthLeft - childLength
         },
       );
       return lines;
@@ -267,6 +272,7 @@ class Scroll extends ScrollBlot {
     if (this.batch) return;
     super.optimize(mutations, context);
     if (mutations.length > 0) {
+      // scroll dom 渲染完成
       this.emitter.emit(Emitter.events.SCROLL_OPTIMIZE, mutations, context);
     }
   }
@@ -278,16 +284,17 @@ class Scroll extends ScrollBlot {
   remove() {
     // Never remove self
   }
-
+  // 运行时监听到dom 变化, 拦截takeRecords 如果没有啥也不干，数据过滤，只处理注册的blot
   update(source?: EmitterSource): void;
   update(mutations?: MutationRecord[]): void;
   update(mutations?: MutationRecord[] | EmitterSource): void {
-    if (this.batch) {
+    if (this.batch) { // 合成事件和块操作都会打开
       if (Array.isArray(mutations)) {
         this.batch = this.batch.concat(mutations);
       }
       return;
     }
+    // inline 执行
     let source: EmitterSource = Emitter.sources.USER;
     if (typeof mutations === 'string') {
       source = mutations;
@@ -295,14 +302,21 @@ class Scroll extends ScrollBlot {
     if (!Array.isArray(mutations)) {
       mutations = this.observer.takeRecords();
     }
+
+    const arrray = mutations;
+
+    // 过滤掉不存在blot的dom 变化
     mutations = mutations.filter(({ target }) => {
       const blot = this.find(target, true);
       return blot && !isUpdatable(blot);
     });
+    // dom准备->更新
     if (mutations.length > 0) {
       this.emitter.emit(Emitter.events.SCROLL_BEFORE_UPDATE, source, mutations);
     }
+    // 复制一个新的数组出来，断开引用
     super.update(mutations.concat([])); // pass copy
+   // dom准备->更新完成
     if (mutations.length > 0) {
       this.emitter.emit(Emitter.events.SCROLL_UPDATE, source, mutations);
     }
