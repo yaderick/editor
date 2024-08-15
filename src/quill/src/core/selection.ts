@@ -55,9 +55,11 @@ class Selection {
     this.root = this.scroll.domNode;
     // @ts-expect-error
     this.cursor = this.scroll.create('cursor', this); // 实例化cursor blot 但是没有插入dom
-    // savedRange is last non-null range
+    // savedRange is last non-null oldRange
     this.savedRange = new Range(0, 0);
+    // oldRange
     this.lastRange = this.savedRange;
+    // 浏览器选区
     this.lastNative = null;
     // 注册输入法监听事件
     this.handleComposition();
@@ -65,7 +67,7 @@ class Selection {
     this.handleDragging();
     // 注册鼠标选取事件
     this.emitter.listenDOM('selectionchange', document, () => {
-      if (!this.mouseDown && !this.composing) {
+      if (!this.mouseDown && !this.composing) { // 理论上一般在mouseDown ->selectionchange -> mouseUp ,有时待确定？？mouseDown -> mouseUp -> selectionchange
         setTimeout(this.update.bind(this, Emitter.sources.USER), 1);
       }
     });
@@ -97,13 +99,15 @@ class Selection {
                 (mutation.type === 'attributes' &&
                   mutation.target === this.root),
             );
-            this.update(triggeredByTyping ? Emitter.sources.SILENT : source);
+            this.update(triggeredByTyping ? Emitter.sources.SILENT : source);  // 会触发编辑器最外层回调
           } catch (ignored) {
             // ignore
           }
         },
       );
     });
+
+
     this.emitter.on(Emitter.events.SCROLL_OPTIMIZE, (mutations, context) => {
       if (context.range) {
         const { startNode, startOffset, endNode, endOffset } = context.range;
@@ -111,6 +115,8 @@ class Selection {
         this.update(Emitter.sources.SILENT);
       }
     });
+
+
     this.update(Emitter.sources.SILENT);
   }
 
@@ -119,6 +125,7 @@ class Selection {
     this.emitter.on(Emitter.events.COMPOSITION_BEFORE_START, () => {
       this.composing = true;
     });
+
     this.emitter.on(Emitter.events.COMPOSITION_END, () => {
       this.composing = false;
       if (this.cursor.parent) {
@@ -148,7 +155,7 @@ class Selection {
 
   focus() {
     if (this.hasFocus()) return;
-    this.root.focus({ preventScroll: true });
+    this.root.focus({ preventScroll: true }); // 不滚动到可见范围，默认是false 即滚动
     this.setRange(this.savedRange);
   }
 
@@ -242,64 +249,9 @@ class Selection {
       width: 0,
     };
   }
-
-  getNativeRange(): NormalizedRange | null {
-    const selection = document.getSelection();
-    if (selection == null || selection.rangeCount <= 0) return null;
-    const nativeRange = selection.getRangeAt(0);
-    if (nativeRange == null) return null;
-    const range = this.normalizeNative(nativeRange);
-    debug.info('getNativeRange', range);
-    return range;
-  }
-
-  getRange(): [Range, NormalizedRange] | [null, null] {
-    const root = this.scroll.domNode;
-    if ('isConnected' in root && !root.isConnected) {
-      // document.getSelection() forces layout on Blink, so we trend to
-      // not calling it.
-      return [null, null];
-    }
-    const normalized = this.getNativeRange();
-    if (normalized == null) return [null, null];
-    const range = this.normalizedToRange(normalized);
-    return [range, normalized];
-  }
-
-  hasFocus(): boolean {
-    return (
-      document.activeElement === this.root ||
-      (document.activeElement != null &&
-        contains(this.root, document.activeElement))
-    );
-  }
-
-  normalizedToRange(range: NormalizedRange) {
-    const positions: [Node, number][] = [
-      [range.start.node, range.start.offset],
-    ];
-    if (!range.native.collapsed) {
-      positions.push([range.end.node, range.end.offset]);
-    }
-    const indexes = positions.map((position) => {
-      const [node, offset] = position;
-      const blot = this.scroll.find(node, true);
-      // @ts-expect-error Fix me later
-      const index = blot.offset(this.scroll);
-      if (offset === 0) {
-        return index;
-      }
-      if (blot instanceof LeafBlot) {
-        return index + blot.index(node, offset);
-      }
-      // @ts-expect-error Fix me later
-      return index + blot.length();
-    });
-    const end = Math.min(Math.max(...indexes), this.scroll.length() - 1);
-    const start = Math.min(end, ...indexes);
-    return new Range(start, end - start);
-  }
-
+  /*
+    只对选区节点不是文本节点进行处理
+  */ 
   normalizeNative(nativeRange: NativeRange) {
     if (
       !contains(this.root, nativeRange.startContainer) ||
@@ -317,6 +269,7 @@ class Selection {
     };
     [range.start, range.end].forEach((position) => {
       let { node, offset } = position;
+      
       while (!(node instanceof Text) && node.childNodes.length > 0) {
         if (node.childNodes.length > offset) {
           node = node.childNodes[offset];
@@ -342,6 +295,73 @@ class Selection {
     });
     return range;
   }
+   /*
+   * 浏览器原生的选区方法
+   * 
+   */ 
+  getNativeRange(): NormalizedRange | null {
+    const selection = document.getSelection();
+    if (selection == null || selection.rangeCount <= 0) return null;
+    const nativeRange = selection.getRangeAt(0);
+    if (nativeRange == null) return null;
+    const range = this.normalizeNative(nativeRange);
+    debug.info('getNativeRange', range);
+    return range;
+  }
+  // 获取blot自己的最终选区 
+  getRange(): [Range, NormalizedRange] | [null, null] {
+    const root = this.scroll.domNode;
+    // isConnected true, 表示dom 还在文档树中
+    if ('isConnected' in root && !root.isConnected) {
+      // document.getSelection() forces layout on Blink, so we trend to
+      // not calling it.
+      return [null, null];
+    }
+    const normalized = this.getNativeRange();
+    if (normalized == null) return [null, null];
+    const range = this.normalizedToRange(normalized);
+    return [range, normalized];
+  }
+  // 判断编辑器或者编辑器里的子元素是否有光标
+  hasFocus(): boolean {
+    return (
+      //document.activeElement 获取当前拥有输入焦点的元素,如果没有返回null
+      document.activeElement === this.root ||
+      (document.activeElement != null &&
+        contains(this.root, document.activeElement))
+    );
+  }
+  /*
+  * 浏览器的选区转为编辑器自己的选区
+  */
+  normalizedToRange(range: NormalizedRange) {
+    // 二维数组
+    const positions: [Node, number][] = [
+      [range.start.node, range.start.offset],
+    ];
+    if (!range.native.collapsed) {
+      positions.push([range.end.node, range.end.offset]);
+    }
+    const indexes = positions.map((position) => {
+      const [node, offset] = position;
+      const blot = this.scroll.find(node, true);
+      // @ts-expect-error Fix me later
+      const index = blot.offset(this.scroll);
+      if (offset === 0) {
+        return index;
+      }
+      if (blot instanceof LeafBlot) {
+        return index + blot.index(node, offset);
+      }
+      // @ts-expect-error Fix me later
+      return index + blot.length();
+    });
+    const end = Math.min(Math.max(...indexes), this.scroll.length() - 1);
+    const start = Math.min(end, ...indexes);
+    return new Range(start, end - start);
+  }
+
+ 
 
   rangeToNative(range: Range): [Node | null, number, Node | null, number] {
     const scrollLength = this.scroll.length();
@@ -444,10 +464,13 @@ class Selection {
     const [lastRange, nativeRange] = this.getRange();
     this.lastRange = lastRange;
     this.lastNative = nativeRange;
+    
+    
     if (this.lastRange != null) {
       this.savedRange = this.lastRange;
     }
     if (!isEqual(oldRange, this.lastRange)) {
+      // composing 不是合成状态，collapsed: 光标状态；this.cursor.textNode => document.createTextNode('\uFEFF') ?? 为啥不懂
       if (
         !this.composing &&
         nativeRange != null &&
@@ -464,6 +487,7 @@ class Selection {
           );
         }
       }
+
       const args = [
         Emitter.events.SELECTION_CHANGE,
         cloneDeep(this.lastRange),
@@ -479,7 +503,7 @@ class Selection {
   }
 }
 
-function contains(parent: Node, descendant: Node) {
+function contains(parent: Node, descendant: Node) { //descendant 后代
   try {
     // Firefox inserts inaccessible nodes around video elements
     descendant.parentNode; // eslint-disable-line @typescript-eslint/no-unused-expressions

@@ -261,10 +261,15 @@ class Quill {
         this.root.classList.toggle('ql-blank', this.editor.isBlank());
       }
     });
-     // dom 更新完成
+     /**
+      *  Parchemt 模型 更新完成 =>  同步Delta 模型数据
+      *  此处的SCROLL_UPDATE 注册的比 selections.ts 中的SCROLL_UPDATE 早，因此会先触发
+      *  为啥早？ 因为selections.ts 中的SCROLL_UPDATE 只有在SCROLL_BEFORE_UPDATE 触发后才会注册。
+      * */ 
     this.emitter.on(Emitter.events.SCROLL_UPDATE, (source, mutations) => {
+
       const oldRange = this.selection.lastRange;
-      const [newRange] = this.selection.getRange();
+      const [newRange] = this.selection.getRange(); // 更新选区和光标
       const selectionInfo =
         oldRange && newRange ? { oldRange, newRange } : undefined;
       modify.call(
@@ -558,7 +563,9 @@ class Quill {
   getModule(name: string) {
     return this.theme.modules[name];
   }
-
+  /*
+    重新更新光标选区
+  */
   getSelection(focus: true): Range;
   getSelection(focus?: boolean): Range | null;
   getSelection(focus = false): Range | null {
@@ -920,7 +927,7 @@ function modify(
   }
   let range = index == null ? null : this.getSelection();
   const oldDelta = this.editor.delta;
-  // 返回delta
+  // 返回新delta和旧delta 差别
   const change = modifier();
   if (range != null) {
     if (index === true) {

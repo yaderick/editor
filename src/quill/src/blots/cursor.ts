@@ -22,7 +22,7 @@ class Cursor extends EmbedBlot {
     super(scroll, domNode);
     this.selection = selection;
     this.textNode = document.createTextNode(Cursor.CONTENTS);
-    this.domNode.appendChild(this.textNode);
+    this.domNode.appendChild(this.textNode); // <span>\uFEFF</span>
     this.savedLength = 0;
   }
 
@@ -71,7 +71,7 @@ class Cursor extends EmbedBlot {
     // @ts-expect-error Fix me later
     this.parent = null;
   }
-
+  // 还原： 为了抹平浏览器操作的不同
   restore(): EmbedContextRange | null {
     if (this.selection.composing || this.parent == null) return null;
     const range = this.selection.getNativeRange();

@@ -114,12 +114,12 @@ class Keyboard extends Module<KeyboardOptions> {
       );
     }
     this.addBinding(
-      { key: 'Backspace' },
+      { key: 'Backspace' }, // mac 下的delete键
       { collapsed: false },
       this.handleDeleteRange,
     );
     this.addBinding(
-      { key: 'Delete' },
+      { key: 'Delete' },  // 普通键盘下的delete键
       { collapsed: false },
       this.handleDeleteRange,
     );
@@ -173,14 +173,17 @@ class Keyboard extends Module<KeyboardOptions> {
   // 监听所有键盘事件
   listen() {
     this.quill.root.addEventListener('keydown', (evt) => {
-      console.log('键盘事件发生了',evt )
+      
+      // e.preventDefault 调用后，e.defaultPrevented = true 即默认事件已被阻止
       if (evt.defaultPrevented || evt.isComposing) return;
 
       // evt.isComposing is false when pressing Enter/Backspace when composing in Safari
       // https://bugs.webkit.org/show_bug.cgi?id=165004
+      // 是否是合成输入法模式
       const isComposing =
         evt.keyCode === 229 && (evt.key === 'Enter' || evt.key === 'Backspace');
       if (isComposing) return;
+      console.log(this, 'this, 此处debugger this指向错误为dom');
 
       const bindings = (this.bindings[evt.key] || []).concat(
         this.bindings[evt.which] || [],
@@ -191,8 +194,9 @@ class Keyboard extends Module<KeyboardOptions> {
       );
       if (matches.length === 0) return;
       // @ts-expect-error
-      const blot = Quill.find(evt.target, true);
+      const blot = Quill.find(evt.target, true); // 找到顶层的blot, 即Scroll blot
       if (blot && blot.scroll !== this.quill.scroll) return;
+      // 数据模型更新后的 选区位置
       const range = this.quill.getSelection();
       if (range == null || !this.quill.hasFocus()) return;
       const [line, offset] = this.quill.getLine(range.index);
@@ -351,6 +355,7 @@ class Keyboard extends Module<KeyboardOptions> {
       .retain(range.index)
       .delete(range.length)
       .insert('\n', lineFormats);
+    // 通过delta 更新 parchment 模型
     this.quill.updateContents(delta, Quill.sources.USER);
     this.quill.setSelection(range.index + 1, Quill.sources.SILENT);
     this.quill.focus();

@@ -10,7 +10,6 @@ class Break extends EmbedBlot {
       this.remove();
     }
   }
-
   length() {
     return 0;
   }

@@ -163,10 +163,10 @@ class Editor {
     return this.delta.slice(index, index + length);
   }
 
-  // {ops: [{remai: {}}, {inse: {}}]}
   getDelta(): Delta {
     // this.scroll.lines() = [Block]
-    // new Delta() = {} => {ops: [{remai: {}}, {inse: {}}]}
+    // new Delta() => {ops: []}
+    // line.delta() => {ops: [{insert: '\n'}]}
     return this.scroll.lines().reduce((delta, line) => { // reduce 用作数据聚合
       return delta.concat(line.delta());
     }, new Delta());
@@ -296,6 +296,7 @@ class Editor {
       const formats = bubbleFormats(textBlot);
       const index = textBlot.offset(this.scroll);
       // @ts-expect-error Fix me later
+      // ? 啥意思 ？？
       const oldValue = mutations[0].oldValue.replace(CursorBlot.CONTENTS, '');
       const oldText = new Delta().insert(oldValue);
       // @ts-expect-error
@@ -313,10 +314,11 @@ class Editor {
         }
         return delta.push(op);
       }, new Delta());
-      this.delta = oldDelta.compose(change);
+      this.delta = oldDelta.compose(change); // 更新delta
     } else {
       this.delta = this.getDelta();
       if (!change || !isEqual(oldDelta.compose(change), this.delta)) {
+        // 以oldDelta 为基准，this.delta 比以oldDelta 变换的部分 diffDelta{ops: [{remain: 6}, {insert: 'world'}]}
         change = oldDelta.diff(this.delta, selectionInfo);
       }
     }
@@ -464,7 +466,7 @@ function normalizeDelta(delta: Delta) {
     return normalizedDelta.push(op);
   }, new Delta());
 }
-
+// 调整选区范围
 function shiftRange({ index, length }: Range, amount: number) {
   return new Range(index + amount, length);
 }

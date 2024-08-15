@@ -12,7 +12,9 @@ class Composition {
     this.setupListeners();
   }
 
+  // 初始化监听
   private setupListeners() {
+    // compositionstart 在输入法不是英文下就会触发
     this.scroll.domNode.addEventListener('compositionstart', (event) => {
       console.log('合成事件发生了', event);
       if (!this.isComposing) {
@@ -47,6 +49,7 @@ class Composition {
   }
 
   private handleCompositionEnd(event: CompositionEvent) {
+    console.log('合成事件结束了', this.scroll.children);
     this.emitter.emit(Emitter.events.COMPOSITION_BEFORE_END, event);
     this.scroll.batchEnd();
     this.emitter.emit(Emitter.events.COMPOSITION_END, event);

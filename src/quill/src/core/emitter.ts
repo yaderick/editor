@@ -3,12 +3,20 @@ import instances from './instances.js';
 import logger from './logger.js';
 
 const debug = logger('quill:events');
+// 前三个在selection.ts 中添加； ’click‘ 是在主题Base.ts中添加
 const EVENTS = ['selectionchange', 'mousedown', 'mouseup', 'click'];
 
 
-// 事件系统，给document 绑定 mousedown -> selectionchange -> mouseup -> click
+/**
+ * 事件系统，给document 绑定 mousedown -> selectionchange -> mouseup -> click
+ * 
+ * selectionchange  触发条件： 1、光标位置有变化 或者 2、选区发生变化才会触发。
+ * 例如 1测试文字 触发一次 ； 再在1处点击不会触发selectionchange 只会触发其他点击事件
+ * 1测试文字 -> 测1试文字 会触发
+ * */ 
 EVENTS.forEach((eventName) => {
   document.addEventListener(eventName, (...args) => {
+    console.log(eventName, 'eventName');
     Array.from(document.querySelectorAll('.ql-container')).forEach((node) => {
       const quill = instances.get(node);
       if (quill && quill.emitter) {
@@ -69,16 +77,15 @@ class Emitter extends EventEmitter<string> {
     // @ts-expect-error
     return super.emit(...args);
   }
-
+  // 执行listenDOM事件
   handleDOM(event: Event, ...args: unknown[]) {
     (this.domListeners[event.type] || []).forEach(({ node, handler }) => {
       if (event.target === node || node.contains(event.target as Node)) {
-        console.log(event.type, '事件')
         handler(event, ...args);
       }
     });
   }
-  // 监听事件
+  // 注册handleDOM 事件
   listenDOM(eventName: string, node: Node, handler: EventListener) {
     if (!this.domListeners[eventName]) {
       this.domListeners[eventName] = [];

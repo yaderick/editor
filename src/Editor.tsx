@@ -4,7 +4,7 @@ import "quill-css/quill.snow.css";
 import Quill, {Module,Parchment,  Range} from 'quill';
 // import Parchment from 'Parchment'
 
-console.log(Parchment, '--');
+import  {delta1, delta2 , delta3, deleteDelta} from './deltaDemo'
 
 import CleanBlot from './components/blots/CleanBlot';
 import UndoBlot from './components/blots/Undo';
@@ -24,6 +24,7 @@ interface EditorIprops {
 const RichEditor: React.FC<EditorIprops> = () => {
 
   const [input, setInput] = useState('')
+  const quillRef = useRef(null)
     // class Anemail {
     //   static defaultConif ={
     //     a: 1
@@ -85,7 +86,11 @@ const RichEditor: React.FC<EditorIprops> = () => {
         }
       });
 
-      console.log(quill)
+      quillRef.current = quill
+
+      // console.log(quill, 'quill')
+      // console.log(Parchment, 'Parchment');
+      
       // quill.insertText(0, 'Hello', 'link', 'https://world.com');
       // const pNode = document.querySelector('p');
       // const linkNode = document.querySelector('a');
@@ -98,18 +103,25 @@ const RichEditor: React.FC<EditorIprops> = () => {
       // console.log(Quill.find(linkBlot.scroll.domNode.parentElement));
 
 
-      quill.on(Quill.events.TEXT_CHANGE, (delta, oldDelta, eventTrigger: string) => {
-        console.log(delta, oldDelta , quill.scroll, '2')
-        
+      quill.on(Quill.events.TEXT_CHANGE, (changeDelta, oldDelta, eventTrigger: string) => {
+        // changeDelta = oldDelta.diff(newDelta)
+        console.log(changeDelta, oldDelta , quill.scroll, 'TEXT_CHANGE 回调')
       });
-      console.log(quill.scroll, '1')
+      // const test = localStorage.getItem('delta')
+      // quill.setContents(JSON.parse(test) ) // 只接受insert 
+
+      console.log(quill.scroll, 'parchment 更新完成');
 
       // quill.on(Quill.events.SELECTION_CHANGE, (...args) => {
       //   onSelectionChangeRef.current?.(...args);
       // });
 
     }, [])
-
+    const  handleClick = () => {
+      console.log(quillRef.current.getContents(), '获取的delta')
+      const delta = JSON.stringify( quillRef.current.getContents())
+      localStorage.setItem('delta',delta )
+    }
     return (
       <div>
         {/* <div>
@@ -130,6 +142,7 @@ const RichEditor: React.FC<EditorIprops> = () => {
           }}/>
           {input}
         </div> */}
+        <div onClick={handleClick}>获取delta 数据</div>
         <div id='editor'>
             {/* <p>你好，这是一个html</p>
             <p>你好，这是二个html</p>

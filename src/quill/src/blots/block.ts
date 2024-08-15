@@ -19,7 +19,7 @@ class Block extends BlockBlot {
   // 返回delta
   delta(): Delta {
     if (this.cache.delta == null) {
-      this.cache.delta = blockDelta(this);
+      this.cache.delta = blockDelta(this); // 初始化 Blok 的 delta 为  {ops: [{insert: {'\n'}}]}
     }
     return this.cache.delta;
   }
@@ -45,7 +45,7 @@ class Block extends BlockBlot {
     }
     this.cache = {};
   }
-
+  // 核心方法是split() 按\n 创建blot 并插入或者追加到parchment 中
   insertAt(index: number, value: string, def?: unknown) {
     if (def != null) {
       super.insertAt(index, value, def);
@@ -71,7 +71,7 @@ class Block extends BlockBlot {
     lines.reduce((lineIndex, line) => {
       // @ts-expect-error Fix me later
       block = block.split(lineIndex, true); // 自己的方法 113行
-      block.insertAt(0, line);
+      block.insertAt(0, line);  // 递归调用
       return line.length;
     }, index + text.length);
   }
@@ -84,9 +84,14 @@ class Block extends BlockBlot {
     }
     this.cache = {};
   }
-
+  /**
+   * 
+   * 块的 legnth() 定义在parent.ts 中
+   * 行内 legnth() 定义在shadow.ts 中，统一返回1
+   */
   length() {
     if (this.cache.length == null) {
+      // 自己children包length() + 自己1
       this.cache.length = super.length() + NEWLINE_LENGTH;
     }
     return this.cache.length;
@@ -110,7 +115,7 @@ class Block extends BlockBlot {
     super.removeChild(child);
     this.cache = {};
   }
-  // 单独处理block
+  // 按/n 创建block blot 并插入  真实dom中
   split(index: number, force: boolean | undefined = false): Blot | null {
     if (force && (index === 0 || index >= this.length() - NEWLINE_LENGTH)) {
       // 返回Blot 实例
@@ -184,11 +189,15 @@ class BlockEmbed extends EmbedBlot {
 BlockEmbed.scope = Scope.BLOCK_BLOT;
 // It is important for cursor behavior BlockEmbeds use tags that are block level elements
 // 对于光标行为而言，BlockEmbeds 使用的标签必须是块级元素
+/**
+ * 树形结构的深度搜索，将当前节点下所有子节点的搜索出来并将 符合是叶子节点（LeafBlot）类型的 返回
+ * 所有叶子节点后都加一个\n
+*/
 function blockDelta(blot: BlockBlot, filter = true) {
   return blot
     .descendants(LeafBlot)
     .reduce((delta, leaf) => {
-      if (leaf.length() === 0) {
+      if (leaf.length() === 0) { // 只有 Break 的length = 0
         return delta;
       }
       return delta.insert(leaf.value(), bubbleFormats(leaf, {}, filter));

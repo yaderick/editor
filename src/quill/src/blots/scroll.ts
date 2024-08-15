@@ -55,13 +55,20 @@ class Scroll extends ScrollBlot {
     this.enable();
     this.domNode.addEventListener('dragstart', (e) => this.handleDragStart(e));
   }
-  // 行内块渲染标识符，数据多个'\n'时
+  /**
+   * batchStart 暂停数据模型更新
+   * 1、compositionstart 事件开始
+   * 2、本类 insertContents 调用
+   * 3、editor.ts updateContents 调用
+  */
   batchStart() {
     if (!Array.isArray(this.batch)) {
       this.batch = [];
     }
   }
-  // 行内块渲染标识符
+  /**
+   * batchEnd 数据模型开始批量更新，避免在中文输入中不停地更新
+  */
   batchEnd() {
     if (!this.batch) return;
     const mutations = this.batch;
@@ -108,7 +115,10 @@ class Scroll extends ScrollBlot {
     super.formatAt(index, length, format, value);
     this.optimize();
   }
-  // 给定位置插入值
+  /*
+  * 方法同初始化的 optimize 先维护好维护parchment，再通过optimize 实例化所有blot
+  * 根据delta转换后的index和value 创建blot 维护parchment ; 最后实例化（optimize）
+  */ 
   insertAt(index: number, value: string, def?: unknown) {
     if (index >= this.length()) {
       if (def == null || this.scroll.query(value, Scope.BLOCK) == null) {
@@ -234,7 +244,7 @@ class Scroll extends ScrollBlot {
       return this.line(index - 1);
     }
     // @ts-expect-error TODO: make descendant() generic
-    return this.descendant(isLine, index);
+    return this.descendant(isLine, index); // 查询所有子节点，将符合条件(块)的blot返回
   }
 
   // 获取所有行内块的blo实例
@@ -310,7 +320,10 @@ class Scroll extends ScrollBlot {
       const blot = this.find(target, true);
       return blot && !isUpdatable(blot);
     });
-    // dom准备->更新
+    /**
+     * dom准备->更新 此时为了给 selection.ts 中的 监听 SCROLL_BEFORE_UPDATE 事件
+     * 增加 一次once 监听 SCROLL_UPDATE 监听事件；
+     * */ 
     if (mutations.length > 0) {
       this.emitter.emit(Emitter.events.SCROLL_BEFORE_UPDATE, source, mutations);
     }
