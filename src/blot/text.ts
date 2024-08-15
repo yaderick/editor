@@ -19,7 +19,8 @@ class TextBlot extends LeafBlot implements Leaf {
 
   constructor(scroll: Root, node: Node) {
     super(scroll, node);
-    this.text = this.statics.value(this.domNode);
+    // 取自#text node 的 data值
+    this.text = this.statics.value(this.domNode); //  statics 来自顶层shadow.ts 的方法
   }
 
   public deleteAt(index: number, length: number): void {

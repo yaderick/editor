@@ -16,8 +16,12 @@ class ShadowBlot implements Blot {
   public static scope: Scope;
   public static tagName: string | string[];
 
+  /*
+  * 通过blot 类中的 tagName 创建真实dom
+  * this永远指向 new  blot 的那个类
+  */ 
   public static create(rawValue?: unknown): Node {
-    if (this.tagName == null) {
+    if (this.tagName == null) {  // 取自实例构造函数类的静态tagName 字段
       throw new ParchmentError('Blot definition missing tagName');
     }
     let node: HTMLElement;
@@ -53,9 +57,15 @@ class ShadowBlot implements Blot {
   public parent: Parent;
 
   // Hack for accessing inherited static methods
+  
+  // 返回new A() 中A类而非 ShadowBlot，可以访问类的静态属性和方法eg: A.create()
   get statics(): any {
     return this.constructor;
   }
+  /*
+  *注意这种写法，ts 独有的通过 访问修饰符自动赋值并创建成员变量
+  * 功能： 给当前实例对象 prev、next、 scroll、domNode
+  */ 
   constructor(
     public scroll: Root,
     public domNode: Node,
@@ -64,19 +74,21 @@ class ShadowBlot implements Blot {
     this.prev = null;
     this.next = null;
   }
-
+  //
   public attach(): void {
     // Nothing to do
   }
-
+  // 复制一个dom, 并实例化对应的blot
   public clone(): Blot {
+    // 浅复制，不包含子div
     const domNode = this.domNode.cloneNode(false);
     return this.scroll.create(domNode);
   }
 
+  // 卸载相关方法，删除blot,删除domNode对blot 的映射
   public detach(): void {
     if (this.parent != null) {
-      this.parent.removeChild(this);
+      this.parent.removeChild(this);  // 调用parent.ts 中的removeChild 方法
     }
     Registry.blots.delete(this.domNode);
   }
@@ -124,7 +136,7 @@ class ShadowBlot implements Blot {
   public length(): number {
     return 1;
   }
-
+  // 光标计算 偏移量 selection.ts
   public offset(root: Blot = this.parent): number {
     if (this.parent == null || this === root) {
       return 0;
@@ -132,6 +144,7 @@ class ShadowBlot implements Blot {
     return this.parent.children.offset(this) + this.parent.offset(root);
   }
 
+  // 
   public optimize(_context?: { [key: string]: any }): void {
     if (
       this.statics.requiredContainer &&

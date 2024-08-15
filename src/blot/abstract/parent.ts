@@ -4,6 +4,7 @@ import Scope from '../../scope.js';
 import type { Blot, BlotConstructor, Parent, Root } from './blot.js';
 import ShadowBlot from './shadow.js';
 
+// 创建dom 没有映射的blot，实例化后返回blot 实例
 function makeAttachedBlot(node: Node, scroll: Root): Blot {
   const found = scroll.find(node);
   if (found) return found;
@@ -38,6 +39,9 @@ class ParentBlot extends ShadowBlot implements Parent {
   public domNode!: HTMLElement;
   public uiNode: HTMLElement | null = null;
 
+  /**
+   * 主要功能：给当前实例添加 this.children = {} 链表结构
+  */
   constructor(scroll: Root, domNode: Node) {
     super(scroll, domNode);
     this.build();
@@ -47,8 +51,9 @@ class ParentBlot extends ShadowBlot implements Parent {
     this.insertBefore(other);
   }
 
+  // 增加blot 和 detach () 互补
   public attach(): void {
-    super.attach();
+    super.attach(); // 是个空方法忽略
     this.children.forEach((child) => {
       child.attach();
     });
@@ -67,7 +72,9 @@ class ParentBlot extends ShadowBlot implements Parent {
   }
 
   /**
-   * Called during construction, should fill its own children LinkedList.
+   * Called during construction, should fill its own children LinkedList. 在构造期间被调用，应该填充它自己的子元素链表
+   * // 给当前实例对象增加children = {head,tail,length } (new LinkedList() ) 
+   * 
    */
   public build(): void {
     this.children = new LinkedList<Blot>();
@@ -98,6 +105,8 @@ class ParentBlot extends ShadowBlot implements Parent {
     });
   }
 
+  // 获取当前对象的 所有子元素 中符合特定条件的子元素
+ 
   public descendant<T extends Blot>(
     criteria: new (...args: any[]) => T,
     index: number,
@@ -107,6 +116,7 @@ class ParentBlot extends ShadowBlot implements Parent {
     index: number,
   ): [Blot | null, number];
   public descendant(criteria: any, index = 0): [Blot | null, number] {
+    // 
     const [child, offset] = this.children.find(index);
     if (
       (criteria.blotName == null && criteria(child)) ||
@@ -120,6 +130,12 @@ class ParentBlot extends ShadowBlot implements Parent {
     }
   }
 
+ /*
+  * 方法的主要作用是根据给定的筛选条件递归地获取所有符合条件的子元素。
+  * 它通过遍历当前对象的子元素，并对每个子元素应用筛选条件。
+  * 如果子元素是 ParentBlot 的实例，则递归查找其子元素的后代。
+  * 这个方法可以用来实现树形结构的深度搜索，适用于需要按条件筛选复杂嵌套结构的场景。
+  */
   public descendants<T extends Blot>(
     criteria: new (...args: any[]) => T,
     index?: number,
@@ -131,23 +147,23 @@ class ParentBlot extends ShadowBlot implements Parent {
     length?: number,
   ): Blot[];
   public descendants(
-    criteria: any,
+    criteria: any, // 用于判断一个子元素是否符合的筛选条件
     index = 0,
     length: number = Number.MAX_VALUE,
   ): Blot[] {
-    let descendants: Blot[] = [];
-    let lengthLeft = length;
+    let descendants: Blot[] = []; // 存储符合条件的子元素
+    let lengthLeft = length; // 剩余的长度，用于限制遍历的范围
     this.children.forEachAt(
       index,
       length,
       (child: Blot, childIndex: number, childLength: number) => {
-        if (
+        if ( // 筛选条件
           (criteria.blotName == null && criteria(child)) ||
           (criteria.blotName != null && child instanceof criteria)
         ) {
           descendants.push(child);
         }
-        if (child instanceof ParentBlot) {
+        if (child instanceof ParentBlot) { //递归查找
           descendants = descendants.concat(
             child.descendants(criteria, childIndex, lengthLeft),
           );
@@ -157,7 +173,7 @@ class ParentBlot extends ShadowBlot implements Parent {
     );
     return descendants;
   }
-
+  // 移除blot
   public detach(): void {
     this.children.forEach((child) => {
       child.detach();
@@ -205,10 +221,11 @@ class ParentBlot extends ShadowBlot implements Parent {
     });
   }
 
+  // 创建blot 并插入到parchment 中
   public insertAt(index: number, value: string, def?: any): void {
     const [child, offset] = this.children.find(index);
     if (child) {
-      child.insertAt(offset, value, def);
+      child.insertAt(offset, value, def); // 调用blot自己的inserat()方法
     } else {
       const blot =
         def == null
@@ -218,25 +235,8 @@ class ParentBlot extends ShadowBlot implements Parent {
     }
   }
 
-  public insertBefore(childBlot: Blot, refBlot?: Blot | null): void {
-    if (childBlot.parent != null) {
-      childBlot.parent.children.remove(childBlot);
-    }
-    let refDomNode: Node | null = null;
-    this.children.insertBefore(childBlot, refBlot || null);
-    childBlot.parent = this;
-    if (refBlot != null) {
-      refDomNode = refBlot.domNode;
-    }
-    if (
-      this.domNode.parentNode !== childBlot.domNode ||
-      this.domNode.nextSibling !== refDomNode
-    ) {
-      this.domNode.insertBefore(childBlot.domNode, refDomNode);
-    }
-    childBlot.attach();
-  }
-
+ 
+  // 获取当前子节点包含的blot个数
   public length(): number {
     return this.children.reduce((memo, child) => {
       return memo + child.length();
@@ -249,16 +249,51 @@ class ParentBlot extends ShadowBlot implements Parent {
     });
   }
 
+   /*
+   * 给定元素前插入blot, 然后插入dom
+  *  首先维护好blot 链表结构，然后操作更新dom
+  * 通过 链表结构维护好 blot 层级关系，然后将 blot 关联的真实dom 插入html
+  */ 
+   public insertBefore(childBlot: Blot, refBlot?: Blot | null): void {
+    if (childBlot.parent != null) {
+      childBlot.parent.children.remove(childBlot);
+    }
+    let refDomNode: Node | null = null;
+    // 1 插入之前给定blot 之前
+    this.children.insertBefore(childBlot, refBlot || null);
+    childBlot.parent = this;
+    if (refBlot != null) {
+      refDomNode = refBlot.domNode;
+    }
+
+    // div !=  #text
+    if (
+      this.domNode.parentNode !== childBlot.domNode ||
+      this.domNode.nextSibling !== refDomNode
+    ) {
+      // 2、插入真实dom ; 真实dom: <p>1<p> (=> insertBefore =>) <p>1<p> 会触发MutationObserver 先移除 #text 1 然后在添加 #text 1； 操作在scrollBlot的optimize 方法中劫持了 takeRecords， 所以没有重新触发observer的回调
+      this.domNode.insertBefore(childBlot.domNode, refDomNode); // 如果childBlot.domNode 已在dom 中会触发MutationObserver 回调吗？ 答案是会的，quilljs 会不会重新触发回调，未知？？？
+    }
+    childBlot.attach();
+  }
+
+
+  // 实例化blot后 - >插入dom
   public optimize(context?: { [key: string]: any }): void {
     super.optimize(context);
+
+    // 校验blot的可以插入子节点的白名单
     this.enforceAllowedChildren();
     if (this.uiNode != null && this.uiNode !== this.domNode.firstChild) {
       this.domNode.insertBefore(this.uiNode, this.domNode.firstChild);
     }
+    // 初始化走， 首先实例化blot 然后维护好blot 上下关系 最后生成真实dom
     if (this.children.length === 0) {
       if (this.statics.defaultChild != null) {
+        // 实例化Blot类
         const child = this.scroll.create(this.statics.defaultChild.blotName);
-        this.appendChild(child);
+        // 通过链表结构生成 blot 关系， 然后插入真实dom树 
+        this.appendChild(child); // 注意会操作domNode
         // TODO double check if necessary
         // child.optimize(context);
       } else {
@@ -278,6 +313,7 @@ class ParentBlot extends ShadowBlot implements Parent {
     return position;
   }
 
+  // 删除 blot 节点关系
   public removeChild(child: Blot): void {
     this.children.remove(child);
   }
@@ -330,19 +366,23 @@ class ParentBlot extends ShadowBlot implements Parent {
     }
     this.remove();
   }
-
+  // 重置blot关系 
   public update(
     mutations: MutationRecord[],
     _context: { [key: string]: any },
   ): void {
+    // 新增节点都是原生dom 节点
     const addedNodes: Node[] = [];
+    // 删除节点
     const removedNodes: Node[] = [];
+
     mutations.forEach((mutation) => {
       if (mutation.target === this.domNode && mutation.type === 'childList') {
         addedNodes.push(...mutation.addedNodes);
         removedNodes.push(...mutation.removedNodes);
       }
-    });
+    }); 
+    // [br]
     removedNodes.forEach((node: Node) => {
       // Check node has actually been removed
       // One exception is Chrome does not immediately remove IFRAMEs
@@ -360,19 +400,22 @@ class ParentBlot extends ShadowBlot implements Parent {
       if (blot == null) {
         return;
       }
+      // 删除的dom节点成为孤立节点，没有父节点了
       if (
         blot.domNode.parentNode == null ||
         blot.domNode.parentNode === this.domNode
       ) {
-        blot.detach();
+        blot.detach(); // 调用最顶层shadowts 中的detach 方法，用来删除blot
       }
     });
-    addedNodes
-      .filter((node) => {
-        return node.parentNode === this.domNode && node !== this.uiNode;
-      })
+    // [#text]
+    const addedNodesFilter = addedNodes.filter((node) => {
+      return node.parentNode === this.domNode && node !== this.uiNode;
+    })
+  
+    const addedNodesSort = addedNodesFilter
       .sort((a, b) => {
-        if (a === b) {
+        if (a === b) { // 0 顺序不变； a<b 返回 < 0 ，a应该在b 前面顺序不变；a > b 大于 0 ， a应该在b后面； 
           return 0;
         }
         if (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) {
@@ -380,11 +423,13 @@ class ParentBlot extends ShadowBlot implements Parent {
         }
         return -1;
       })
-      .forEach((node) => {
+
+      addedNodesSort.forEach((node) => {
         let refBlot: Blot | null = null;
         if (node.nextSibling != null) {
           refBlot = this.scroll.find(node.nextSibling);
         }
+        // 返回 this.scroll.find(node) 查找的blot 实例； 没有就 scroll.create(node)创建新的blot,并实例化后返回
         const blot = makeAttachedBlot(node, this.scroll);
         if (blot.next !== refBlot || blot.next == null) {
           if (blot.parent != null) {
@@ -393,6 +438,7 @@ class ParentBlot extends ShadowBlot implements Parent {
           this.insertBefore(blot, refBlot || undefined);
         }
       });
+
     this.enforceAllowedChildren();
   }
 }
