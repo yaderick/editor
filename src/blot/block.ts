@@ -52,7 +52,7 @@ class BlockBlot extends ParentBlot implements Formattable {
       return;
     } else if (format instanceof Attributor) {
       this.attributes.attribute(format, value);
-    } else if (name === this.statics.blotName && !value) {
+    } else if (name === this.statics.blotName && !value) { // name: header value: h1
       this.replaceWith(BlockBlot.blotName);
     } else if (
       value &&
@@ -64,6 +64,7 @@ class BlockBlot extends ParentBlot implements Formattable {
 
   public formats(): { [index: string]: any } {
     const formats = this.attributes.values();
+    // 返回构造函数.formats 为静态方法
     const format = this.statics.formats(this.domNode, this.scroll);
     if (format != null) {
       formats[this.statics.blotName] = format;

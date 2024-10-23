@@ -9,6 +9,9 @@ import type {
   Root,
 } from './blot.js';
 
+/**
+ * 格式化方法formAt 等，多数都是为了textblot继承用的
+*/
 class ShadowBlot implements Blot {
   public static blotName = 'abstract';
   public static className: string;
@@ -17,6 +20,7 @@ class ShadowBlot implements Blot {
   public static tagName: string | string[];
 
   /*
+  * 所有blot 初始化创建的方法
   * 通过blot 类中的 tagName 创建真实dom
   * this永远指向 new  blot 的那个类
   */ 
@@ -26,8 +30,8 @@ class ShadowBlot implements Blot {
     }
     let node: HTMLElement;
     let value: string | number | undefined;
-    if (Array.isArray(this.tagName)) {
-      if (typeof rawValue === 'string') {
+    if (Array.isArray(this.tagName)) { // 
+      if (typeof rawValue === 'string') { // blotName: header, rawValue: 'h1'
         value = rawValue.toUpperCase();
         if (parseInt(value, 10).toString() === value) {
           value = parseInt(value, 10);
@@ -88,7 +92,7 @@ class ShadowBlot implements Blot {
   // 卸载相关方法，删除blot,删除domNode对blot 的映射
   public detach(): void {
     if (this.parent != null) {
-      this.parent.removeChild(this);  // 调用parent.ts 中的removeChild 方法
+     this.parent.removeChild(this);  // 调用parent.ts 中的removeChild 方法
     }
     Registry.blots.delete(this.domNode);
   }
@@ -97,19 +101,28 @@ class ShadowBlot implements Blot {
     const blot = this.isolate(index, length);
     blot.remove();
   }
-
+ /**
+  * 允许开发者在不影响原始文本结构的情况下，对选定的部分进行格式设置，尤其是textNode。
+  * index: 表示开始应用格式的位置
+  * length: 表示应用格式的长度。
+  * name: 表示要应用的格式名称。
+  * value: 表示格式的值。
+ */
   public formatAt(
     index: number,
     length: number,
     name: string,
     value: any,
   ): void {
-    const blot = this.isolate(index, length);
+    // 通过光标选区将选中内容 分离出新的blot容器盛放
+    const blot = this.isolate(index, length); // isolate 隔离
     if (this.scroll.query(name, Scope.BLOT) != null && value) {
+      // 将新分离出来的blot， 插入到 name(例如bold)  blot中, 例如： 123456789 => 89 => Bold包裹89textBolt 
       blot.wrap(name, value);
     } else if (this.scroll.query(name, Scope.ATTRIBUTE) != null) {
       const parent = this.scroll.create(this.statics.scope) as Parent &
         Formattable;
+      // 使用 wrap 方法将分离出的子 Blot 包裹在新创建的父 Blot 中
       blot.wrap(parent);
       parent.format(name, value);
     }
@@ -123,9 +136,14 @@ class ShadowBlot implements Blot {
     const ref = this.split(index);
     this.parent.insertBefore(blot, ref || undefined);
   }
-
+  /**
+   * 用于从当前 Blot 对象中分离出一部分内容，比如选择文本的一部分并对其进行单独的操作
+   * index: 分离开始的位置
+   * length： 分离长度
+  */
   public isolate(index: number, length: number): Blot {
-    const target = this.split(index);
+    // 分割出新的blot
+    const target = this.split(index); // 如果是textNode 调用parchment 下的text.ts 的 spilt
     if (target == null) {
       throw new Error('Attempt to isolate at end');
     }
@@ -171,6 +189,7 @@ class ShadowBlot implements Blot {
     return replacement;
   }
 
+  // 如果位置从0 开始说明是整个blot ,不需要切割
   public split(index: number, _force?: boolean): Blot | null {
     return index === 0 ? this : this.next;
   }
@@ -181,7 +200,11 @@ class ShadowBlot implements Blot {
   ): void {
     // Nothing to do by default
   }
-
+  /**
+   * wrap方法的目的是将当前blot包裹在一个新的或已存在的父blot中
+   * name 是父，this 是子
+   * eg: name: bold, value: true
+  */
   public wrap(name: string | Parent, value?: any): Parent {
     const wrapper =
       typeof name === 'string'

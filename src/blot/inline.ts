@@ -60,20 +60,22 @@ class InlineBlot extends ParentBlot implements Formattable {
   }
 
   public format(name: string, value: any): void {
+    // 取消格式化
     if (name === this.statics.blotName && !value) {
       this.children.forEach((child) => {
-        if (!(child instanceof InlineBlot)) {
-          child = child.wrap(InlineBlot.blotName, true);
+        if (!(child instanceof InlineBlot)) { // textblot 就不是 inlineBlot 实例
+          child = child.wrap(InlineBlot.blotName, true); // textBlot 作为InlineBlot的children
         }
         this.attributes.copy(child as InlineBlot);
       });
       this.unwrap();
     } else {
+    // 添加格式化
       const format = this.scroll.query(name, Scope.INLINE);
       if (format == null) {
         return;
       }
-      if (format instanceof Attributor) {
+      if (format instanceof Attributor) { // size
         this.attributes.attribute(format, value);
       } else if (
         value &&
@@ -85,9 +87,14 @@ class InlineBlot extends ParentBlot implements Formattable {
   }
 
   public formats(): { [index: string]: any } {
+    // {}
     const formats = this.attributes.values();
+    // 基层inline blot 自己的静态方法 formats，这么看继承inlineblot 的必须写 静态方法formats？
+    // link -> 自己的 方法 return domNode.getAttribute('href');
     const format = this.statics.formats(this.domNode, this.scroll);
     if (format != null) {
+      // eg： bold => {bold: true}
+      // eg： link => {link: 'http://localhost:9000/'} {name: value}
       formats[this.statics.blotName] = format;
     }
     return formats;
@@ -99,13 +106,15 @@ class InlineBlot extends ParentBlot implements Formattable {
     name: string,
     value: any,
   ): void {
+     // 取消格式化
     if (
       this.formats()[name] != null ||
       this.scroll.query(name, Scope.ATTRIBUTE)
     ) {
       const blot = this.isolate(index, length) as InlineBlot;
-      blot.format(name, value);
+      blot.format(name, value); // 上面自己的form方法
     } else {
+      // 新增格式化
       super.formatAt(index, length, name, value);
     }
   }
@@ -113,6 +122,7 @@ class InlineBlot extends ParentBlot implements Formattable {
   public optimize(context: { [key: string]: any }): void {
     super.optimize(context);
     const formats = this.formats();
+    // 格式紧凑方法，将去除多余的span , eg: 123<span>678</span>
     if (Object.keys(formats).length === 0) {
       return this.unwrap(); // unformatted span
     }

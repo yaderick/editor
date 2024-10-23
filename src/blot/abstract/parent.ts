@@ -209,13 +209,17 @@ class ParentBlot extends ShadowBlot implements Parent {
       }
     });
   }
-
+  /**
+   * 对指定索引和长度范围内的子元素应用特定的格式。
+   * 它通过遍历子元素并调用每个子元素的 formatAt 方法来实现这一功能。
+  */
   public formatAt(
     index: number,
     length: number,
     name: string,
     value: any,
   ): void {
+    // 从光标位置遍历parchment 树，直接返回相关的blot ,而非从头开始
     this.children.forEachAt(index, length, (child, offset, childLength) => {
       child.formatAt(offset, childLength, name, value);
     });
@@ -225,7 +229,7 @@ class ParentBlot extends ShadowBlot implements Parent {
   public insertAt(index: number, value: string, def?: any): void {
     const [child, offset] = this.children.find(index);
     if (child) {
-      child.insertAt(offset, value, def); // 调用blot自己的inserat()方法
+      child.insertAt(offset, value, def); // 更新parchment 且插入dom
     } else {
       const blot =
         def == null
@@ -243,6 +247,7 @@ class ParentBlot extends ShadowBlot implements Parent {
     }, 0);
   }
 
+  // 移动blo层级，将孙子节点移动到和父节点同级
   public moveChildren(targetParent: Parent, refNode?: Blot | null): void {
     this.children.forEach((child) => {
       targetParent.insertBefore(child, refNode);
@@ -278,7 +283,10 @@ class ParentBlot extends ShadowBlot implements Parent {
   }
 
 
-  // 实例化blot后 - >插入dom
+  /**
+   *  实例化blot后 - >插入dom
+   *  保证blot（继承parent 的） 有一个 默认的子blot
+   * */ 
   public optimize(context?: { [key: string]: any }): void {
     super.optimize(context);
 
@@ -317,7 +325,11 @@ class ParentBlot extends ShadowBlot implements Parent {
   public removeChild(child: Blot): void {
     this.children.remove(child);
   }
-
+  /**
+   * 用新的元素替换现有的元素，并可以处理其子元素的移动
+   * 如果新元素有children，那么当前元素的所有子元素都会被移动到这个新的父元素中
+   * 通常block不能 嵌套只能替换
+  */
   public replaceWith(name: string | Blot, value?: any): Blot {
     const replacement =
       typeof name === 'string' ? this.scroll.create(name, value) : name;
@@ -329,9 +341,11 @@ class ParentBlot extends ShadowBlot implements Parent {
 
   public split(index: number, force = false): Blot | null {
     if (!force) {
+      // 偏移为0时, 不需要切割
       if (index === 0) {
         return this;
       }
+      // 偏移是整个blot， 不需要切割
       if (index === this.length()) {
         return this.next;
       }
@@ -359,7 +373,7 @@ class ParentBlot extends ShadowBlot implements Parent {
     }
     return after;
   }
-
+  // 将blot 移动到和父blot同级
   public unwrap(): void {
     if (this.parent) {
       this.moveChildren(this.parent, this.next || undefined);

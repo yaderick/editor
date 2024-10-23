@@ -53,7 +53,7 @@ class TextBlot extends LeafBlot implements Leaf {
     this.text = this.statics.value(this.domNode);
     if (this.text.length === 0) {
       this.remove();
-    } else if (this.next instanceof TextBlot && this.next.prev === this) {
+    } else if (this.next instanceof TextBlot && this.next.prev === this) { // 紧凑格式 #123 #456 合并为一个节点 
       this.insertAt(this.length(), (this.next as TextBlot).value());
       this.next.remove();
     }
@@ -62,18 +62,38 @@ class TextBlot extends LeafBlot implements Leaf {
   public position(index: number, _inclusive = false): [Node, number] {
     return [this.domNode, index];
   }
-
+  /**
+   * 将当前的文本节点（TextBlot）在指定的索引位置进行分割，并返回分割后的新文本节点。
+   * force 是否分割标识
+   * */ 
+  /**
+   * splitText(offset) 将原来的Text 节点分为两个TextNode, 
+   * 1、原来的变为截取后的 eg Hello, world! => Hello,
+   * 2、截取后的返回新值 eg world!新的文本节点
+   * <div id='example'>Hello, world!</div>
+      var div = document.getElementById('example');
+      // 获取文本节点
+      var textNode = div.firstChild; // div 的第一个子节点是文本节点
+      // 在指定位置分割文本节点
+      var newTextNode = textNode.splitText(7);
+      // 现在 textNode 包含 "Hello, "，而 newTextNode 包含 "world!"
+      console.log(textNode.nodeValue); // "Hello, "
+      console.log(newTextNode.nodeValue); // "world!"
+  */
   public split(index: number, force = false): Blot | null {
     if (!force) {
-      if (index === 0) {
+      if (index === 0) { // 不分割
         return this;
       }
-      if (index === this.length()) {
+      if (index === this.length()) { // 不切割直接返回下个节点
         return this.next;
       }
     }
-    const after = this.scroll.create(this.domNode.splitText(index));
+    // 分割后新建的blot
+    const after = this.scroll.create(this.domNode.splitText(index)); // 实例化text blot
+    //  将新建的blot插入 到parchment 中
     this.parent.insertBefore(after, this.next || undefined);
+    // this.domNode.splitText后同步更新textblot的值 
     this.text = this.statics.value(this.domNode);
     return after;
   }

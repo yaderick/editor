@@ -57,7 +57,15 @@ class LinkedList<T extends LinkedNode> {
     return -1;
   }
 
-  // 用于向双向链表中插入节点 node，并将其插入到参考节点 refNode 之前
+  /**
+   *  node 新增节点、refNode 旧节点
+   *  用于向双向链表中插入节点 node，并将其插入到参考节点 refNode 之前
+   *  每个节点有4条线；
+   *  步骤： 
+   *    1、插入节点为主->维护新的两根线（一左p一右n）： 将node的后节点指向refNode， node的 前节点指向refNode.prev
+   *    2、原有前后节点为主：维护剩下两根线（一左n：原有节点的前置节点，一右p： 旧节点）：
+   *  
+   * */ 
   public insertBefore(node: T | null, refNode: T | null): void {
     if (node == null) {
       return;
@@ -137,7 +145,12 @@ class LinkedList<T extends LinkedNode> {
       return ret;
     };
   }
-  //  根据index ,查找对应的blot 实例和索引
+  /**
+   *  通过光标（index）位置，查找光标对应所在的blot和 当前blot 与父blot 的偏移量 offset
+   *  分两类： 一类是block 一类是text 
+   *  <div><p1><p1><p2><p2></div> p1和p2 相对于div 父blot 偏移量都为0
+   *  <p>abc</p> 假设index 为3，cur.length() 现在是4（1 + 3） 返回textblot 和index
+   * */  
   public find(index: number, inclusive = false): [T | null, number] {
     const next = this.iterator();  // 闭包保留指针
     let cur = next(); // 返回当前指针节点，然后移动指针到下一位 

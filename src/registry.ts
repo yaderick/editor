@@ -61,6 +61,7 @@ export default class Registry implements RegistryInterface {
   */
   public create(scroll: Root, input: Node | string | Scope, value?: any): Blot {
     // 根据 input（blotName） 查询 blotName 所注册的类
+    // input : bold, value: true
     const match = this.query(input); // Blot 类 
     if (match == null) {
       throw new ParchmentError(`Unable to create ${input} blot`);
@@ -71,7 +72,7 @@ export default class Registry implements RegistryInterface {
       // @ts-expect-error Fix me later
       input instanceof Node || input.nodeType === Node.TEXT_NODE
         ? input
-        : blotClass.create(value); // <p></p> 通过tagName创建真实dom
+        : blotClass.create(value); // <p></p> 通过tagName创建真实dom; 静态create 方法，调用 shadow.ts 中的create 方法
 
     const blot = new blotClass(scroll, node as Node, value);
     Registry.blots.set(blot.domNode, blot);
@@ -82,14 +83,6 @@ export default class Registry implements RegistryInterface {
     return Registry.find(node, bubble);
   }
 
-
-
-
-
-
-
-
-  
   // 查找blot 类
   public query(
     query: string | Node | Scope,
@@ -122,6 +115,7 @@ export default class Registry implements RegistryInterface {
     if (match == null) {
       return null;
     }
+    // 判断match 是否符合scope 规定的范围， 例如 query('bold', Parchment.Scope.BLOCK) => null bold 不是块
     if (
       'scope' in match &&
       scope & Scope.LEVEL & match.scope &&

@@ -121,8 +121,8 @@ class ScrollBlot extends ParentBlot implements Root {
     super.optimize(context);
     const mutationsMap = context.mutationsMap || new WeakMap();
     // We must modify mutations directly, cannot make copy and then modify
-    // 注意：这里清空了变更记录，所有回调微任务没有执行
-    let records = Array.from(this.observer.takeRecords());
+    // 注意：下一个微任务执行前的所有遗留未处理的记录；这里清空了变更记录，所有回调微任务没有执行
+     let records = Array.from(this.observer.takeRecords());
     // Array.push currently seems to be implemented by a non-tail recursive function
     // so we cannot just mutations.push.apply(mutations, this.observer.takeRecords());
     while (records.length > 0) {
@@ -243,6 +243,7 @@ class ScrollBlot extends ParentBlot implements Root {
     if (mutationsMap.has(this.domNode)) {
       super.update(mutationsMap.get(this.domNode), context);
     }
+    
     this.optimize(mutations, context);
   }
 }

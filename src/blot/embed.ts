@@ -25,7 +25,7 @@ class EmbedBlot extends LeafBlot implements Formattable {
       super.formatAt(index, length, name, value);
     }
   }
-
+ // 实例方法中调用静态方法
   public formats(): { [index: string]: any } {
     return this.statics.formats(this.domNode, this.scroll);
   }
